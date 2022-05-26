@@ -1,0 +1,38 @@
+version: '3.8'
+
+networks:
+  blog-frontend:
+    name: blog-frontend
+  blog-backend:
+    name: blog-backend
+
+services:
+
+  stacosys:
+    container_name: stacosys
+    image: kianby/stacosys
+    volumes:
+      - ${ROOT_INSTALL}/data/stacosys:/config
+    networks:
+      - blog-backend
+    restart: unless-stopped
+    expose:
+      - 8100
+
+  blog:
+    container_name: blog
+    image: kianby/blogduyax
+    depends_on:
+      - stacosys     
+    networks: 
+      - blog-backend
+      - blog-frontend
+    restart: unless-stopped
+    expose:
+      - 80
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.blog.rule=Host(`${HOST_BLOG}.${DOMAIN}`)
+      - traefik.http.routers.blog.entrypoints=https
+      - traefik.http.routers.blog.tls=true
+      - traefik.docker.network=blog-frontend

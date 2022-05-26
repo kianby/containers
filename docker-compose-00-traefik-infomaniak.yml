@@ -1,0 +1,64 @@
+version: '3.8'
+
+# TODO
+
+services:
+  traefik-infomaniak:
+    container_name: traefik-infomaniak
+    image: traefik:v2.5.3
+    profiles: ["production"]
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false      
+      - --api.dashboard=false
+      - --entrypoints.http.address=:80      
+      - --entrypoints.https.address=:443
+      - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
+      - --certificatesResolvers.letsencrypt.acme.dnsChallenge=true
+      # example : infomaniak
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=infomaniak
+    environment:
+      - INFOMANIAK_ACCESS_TOKEN=${LETSENCRYPT_DNSPROVIDER_TOKEN}
+    labels: 
+      - traefik.enable=true
+      - traefik.http.routers.api.entrypoints=http
+      - traefik.http.routers.api.entrypoints=https
+      - traefik.http.routers.api.service=api@internal
+      # middleware auth
+      - traefik.http.routers.api.middlewares=auth
+      - traefik.http.middlewares.auth.basicauth.users=${BASIC_AUTH}          
+      # request widlcard certificate
+      - traefik.http.routers.api.tls.certresolver=letsencrypt
+      - traefik.http.routers.api.tls.domains[0].main=${DOMAIN}
+      - traefik.http.routers.api.tls.domains[0].sans=*.${DOMAIN}
+      # global redirect to https
+      - traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)
+      - traefik.http.routers.http-catchall.entrypoints=http
+      - traefik.http.routers.http-catchall.middlewares=redirect-to-https
+      # middleware redirect
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true     
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - dmz
+      - baikal-frontend
+      - blog-frontend
+      - deluge-frontend
+      - dokuwiki-frontend
+      - glances-frontend
+      - netdata-frontend
+      - photo-frontend
+      - portainer-frontend
+      - posteio-frontend
+      - seafile-frontend
+      - selfoss-frontend
+      - shaarli-frontend
+      - wallabag-frontend
+      - wwww-frontend
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${ROOT_INSTALL}/selfhosting/traefik/acme.json:/acme.json

@@ -1,0 +1,88 @@
+version: '3.8'
+
+networks:
+  dmz:
+    name: dmz
+  baikal-frontend:
+    name: baikal-frontend
+  blog-frontend:
+    name: blog-frontend
+  deluge-frontend:
+    name: deluge-frontend
+  dokuwiki-frontend:
+    name: dokuwiki-frontend
+  glances-frontend:
+    name: glances-frontend
+  netdata-frontend:
+    name: netdata-frontend
+  photo-frontend:
+    name: photo-frontend
+  portainer-frontend:
+    name: portainer-frontend
+  posteio-frontend:
+    name: portainer-frontend
+  seafile-frontend:
+    name: seafile-frontend    
+  selfoss-frontend:
+    name: selfoss-frontend    
+  shaarli-frontend:
+    name: shaarli-frontend    
+  wallabag-frontend:
+    name: wallabag-frontend    
+  wwww-frontend:
+    name: wwww-frontend
+
+services:
+ 
+  traefik-reverse-proxy-https-helper:
+    container_name: traefik-reverse-proxy-https-helper
+    image: alpine
+    #profiles: ["testing"]   
+    command: sh -c "cd /etc/ssl/traefik
+      && wget traefik.me/cert.pem -O cert.pem
+      && wget traefik.me/privkey.pem -O privkey.pem"
+    volumes:
+      - certs:/etc/ssl/traefik
+    networks:
+      - dmz      
+
+  traefik-local:
+    container_name: traefik-local
+    image: traefik:v2.5.3
+    #profiles: ["testing"]   
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    expose:
+      - 8080
+    labels: 
+      - traefik.enable=true      
+    networks:
+      - dmz
+      - baikal-frontend
+      - blog-frontend
+      - deluge-frontend
+      - dokuwiki-frontend
+      - glances-frontend
+      - netdata-frontend
+      - photo-frontend
+      - portainer-frontend
+      - posteio-frontend
+      - seafile-frontend
+      - selfoss-frontend
+      - shaarli-frontend
+      - wallabag-frontend
+      - wwww-frontend
+    restart: unless-stopped
+    # TODO move podman.sock location to .env file 
+    volumes:
+      - /run/user/1000/podman/podman.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./traefik/tls.yml:/etc/traefik/tls.yml
+      - certs:/etc/ssl/traefik
+    depends_on:
+      - traefik-reverse-proxy-https-helper   
+
+volumes:
+  certs:
